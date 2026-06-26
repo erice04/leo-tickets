@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: leo
+      POSTGRES_PASSWORD: leo
+      POSTGRES_DB: leo_tickets
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leo -d leo_tickets"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://leo:leo@db:5432/leo_tickets
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_AUTH_REDIRECT_URI: ${GOOGLE_AUTH_REDIRECT_URI:-http://localhost:5000/google/auth}
+      BASE_URI: ${BASE_URI:-http://localhost:5000/}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-}
+      SCANNER_API_KEY: ${SCANNER_API_KEY:-dev-scanner-key}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "flask db upgrade &&
+             gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app"
+
+volumes:
+  postgres_data:

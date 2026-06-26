@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            background-color: white; 
+            text-align: center;
+        }
+        #message {
+            padding: 10px 10px;
+            font-size: 24px; /* Set the font size to 24px */
+        }
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;  /* Adjusted font size */
+        }
+        .logout-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body style="background-color: white; text-align: center;">
+    <h1 id="message">Restricted Access: Admin Only
+    </h1>
+    <a id="logout" href="/google/logout" class="logout-button">Logout</a>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Text</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh; /* Full view height */
+            display: flex;
+            flex-direction: column; /* Stacks children vertically */
+            justify-content: center; /* Centers children vertically */
+            align-items: center; /* Centers children horizontally */
+        }
+        .text-display {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+            max-height: 70vh; /* Set a maximum height */
+            overflow-y: auto; /* Enable vertical scrolling if content is too long */
+            word-wrap: break-word;
+        }
+        .text-display h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+        .text-display p {
+            text-align: left;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+        }
+        .back-button {
+            padding: 5px 0px;
+        }
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;  /* Adjusted font size */
+        }
+        .logout-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="text-display">
+        <a id="view" href="/admin" class="back-button">Back</a>
+        <h2>Scanner Log</h2>
+        <div>
+            {{ table|safe }}
+        </div>
+        <a id="logout" href="{{ url_for('google_auth.logout') }}" class="logout-button">Logout</a>
+    </div>
+</body>
+</html>

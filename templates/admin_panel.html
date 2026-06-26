@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px 0 80px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            text-align: center;
+            background: #f5f7fa;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 1200px;
+            gap: 24px;
+        }
+        .form-column, .links-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .form-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .form-container h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+        .form-container .hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin: 0 0 8px;
+            text-align: left;
+        }
+        .form-container textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            margin-bottom: 16px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            resize: vertical;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .form-container textarea[name="email_text_box"],
+        .form-container textarea[name="blacklist_text_box"] {
+            height: 160px;
+        }
+        .form-container textarea[name="title_text_box"] {
+            height: 48px;
+        }
+        .form-container input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .form-container input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .form-container.blacklist input[type="submit"] {
+            background-color: #6c757d;
+        }
+        .form-container.blacklist input[type="submit"]:hover {
+            background-color: #545b62;
+        }
+        .saved-banner {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+        .link {
+            display: block;
+            padding: 8px 0;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+        .logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #b1b1b1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .logout-button:hover {
+            background-color: #5f5f5f;
+        }
+        .button {
+            margin-top: 12px;
+            padding: 10px 20px;
+            background-color: #002955;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .links-column h3 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <a id="logout" href="/google/logout" class="logout-button">Logout</a>
+
+    <div class="container">
+        <div class="form-column">
+            {% if saved %}
+            <div class="saved-banner">{{ saved }}</div>
+            {% endif %}
+
+            <div class="form-container">
+                <h2>Guest List</h2>
+                <p class="hint">One email per line. These users can receive a ticket.</p>
+                <form action="/admin/emails" method="post">
+                    <textarea name="email_text_box" placeholder="One email per line ..." required>{{ allowed_emails_text }}</textarea>
+                    <input type="submit" value="Save Guest List">
+                </form>
+            </div>
+
+            <div class="form-container">
+                <h2>Ticket Title</h2>
+                <p class="hint">Shown on the ticket page (e.g. LEO Spring Fling).</p>
+                <form action="/admin/ticket-info" method="post">
+                    <textarea name="title_text_box" placeholder="Ex: LEO Late Night" required>{{ ticket_title }}</textarea>
+                    <input type="submit" value="Save Ticket Title">
+                </form>
+            </div>
+
+            <div class="form-container blacklist">
+                <h2>Blacklist</h2>
+                <p class="hint">One email per line. Blocked users see the same message as guests not on the list — they are not told they are blacklisted. Saving removes them from the guest list.</p>
+                <form action="/admin/blacklist" method="post">
+                    <textarea name="blacklist_text_box" placeholder="One email per line ...">{{ blacklist_text }}</textarea>
+                    <input type="submit" value="Save Blacklist">
+                </form>
+            </div>
+        </div>
+
+        <div class="links-column">
+            <h3>Views</h3>
+            <a id="email-list" href="/admin/display" class="link">View Guest List</a>
+            <a id="blacklist-view" href="/admin/blacklist/display" class="link">View Blacklist</a>
+            <a id="scanner-log" href="/admin/log" class="link">View Scanner Log</a>
+            <a id="preview" href="/" class="link">Preview Ticket</a>
+
+            <h3 style="margin-top: 24px;">Scanner</h3>
+            <button class="button" id="image_toggle" onclick="toggleImage()">Toggle Yalies Image</button>
+            <p id="image-visibility">Yalies Image Visible: {{ image_visibility }}</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleImage() {
+            fetch('/admin/toggle_image', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const imageDiv = document.getElementById('image-visibility');
+                    imageDiv.textContent = 'Yalies Image Visible: ' + data.visibility;
+                }
+            })
+            .catch((error) => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

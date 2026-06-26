@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://fonts.googleapis.com/css?family=Playfair+Display' rel='stylesheet'>
+    <title>{{ title }}</title>
+    <style>
+        body {
+            text-align: center; /* Centers text within the body element */
+            margin: 0;
+            padding: 0;
+            height: 100vh; /* Full view height */
+            display: flex;
+            flex-direction: column; /* Stacks children vertically */
+            /*justify-content: center; /* Centers children vertically */
+            align-items: center; /* Centers children horizontally */
+        }
+        #title {
+            margin-top: 80px;
+            font-size: 40px;
+            font-family: 'Playfair Display', sans-serif; 
+        }
+        #date {
+            font-size: 30px; 
+            font-family: 'Times New Roman', sans-serif; 
+        }
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #004b96;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;  /* Adjusted font size */
+        }
+        .logout-button:hover {
+            background-color: #00356b;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">{{ title }}</h1>
+    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+    <p id="date"></p> 
+    <a id="logout" href="{{ url_for('google_auth.logout') }}" class="logout-button">Logout</a>
+    <script>
+        var colors = ['#ffb619', '#00356b']; 
+        var currentIndex = 0;
+
+        function updateDateTimeAndColor() {
+            var now = new Date();
+            var hours = now.getHours().toString().padStart(2, '0');
+            var minutes = now.getMinutes().toString().padStart(2, '0');
+            var seconds = now.getSeconds().toString().padStart(2, '0');
+            var month = (now.getMonth() + 1).toString().padStart(2, '0'); // JavaScript months are 0-indexed
+            var day = now.getDate().toString().padStart(2, '0');
+            var year = now.getFullYear();
+
+            var dateString = `${hours}:${minutes}:${seconds} &nbsp;${month}-${day}-${year}`; // Custom format
+            var dateElement = document.getElementById('date');
+            dateElement.innerHTML = dateString; // Update text
+            dateElement.style.color = colors[currentIndex]; // Update color
+            currentIndex = (currentIndex + 1) % colors.length;
+            setTimeout(updateDateTimeAndColor, 1000); // Schedule next update
+        }
+
+        updateDateTimeAndColor(); // Start updating on load
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+.env
+.env.local
+.env.*.local
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+instance/
+.mypy_cache/
+.pytest_cache/
+
+# Secrets
+client_secret.json
+archive/client_secret.json
+
+# Local guest/admin lists (use *.example.txt in repo)
+data/emails.txt
+data/admin.txt
+
+# PII and large legacy data — keep locally in archive/data/
+archive/data/
+data/yale_directory.txt
+data/scanner_log.xlsx
+
+# Legacy scrapers (may contain session tokens if edited locally)
+archive/yalies/
+
+# IDE
+.vscode/
+.idea/

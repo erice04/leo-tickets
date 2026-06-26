@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: leo
+          POSTGRES_PASSWORD: leo
+          POSTGRES_DB: leo_tickets
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run migrations and import check
+        env:
+          DATABASE_URL: postgresql://leo:leo@localhost:5432/leo_tickets
+          SECRET_KEY: test-secret
+        run: |
+          export FLASK_APP=app.py
+          flask db upgrade
+          python -c "from app import create_app; create_app()"
