@@ -27,6 +27,8 @@ def _resolve_data_file(data_dir: str, filename: str) -> str:
     candidates = [filename]
     if filename.endswith(".txt"):
         candidates.append(filename.replace(".txt", ".example.txt"))
+    elif filename.endswith(".json"):
+        candidates.append(filename.replace(".json", ".example.json"))
 
     for base in (data_dir, os.path.join("archive", "data")):
         for name in candidates:
@@ -37,8 +39,8 @@ def _resolve_data_file(data_dir: str, filename: str) -> str:
 
 
 def seed_event_settings(data_dir):
-    title_path = os.path.join(data_dir, "ticket_info.txt")
-    status_path = os.path.join(data_dir, "status.json")
+    title_path = _resolve_data_file(data_dir, "ticket_info.txt")
+    status_path = _resolve_data_file(data_dir, "status.json")
 
     title = "Event"
     if os.path.isfile(title_path):

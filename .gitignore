@@ -14,14 +14,16 @@ instance/
 client_secret.json
 archive/client_secret.json
 
-# Local guest/admin lists (use *.example.txt in repo)
+# Local event data — copy *.example.* files and edit with real values
 data/emails.txt
 data/admin.txt
+data/ticket_info.txt
+data/status.json
+data/yale_directory.txt
+data/scanner_log.xlsx
 
 # PII and large legacy data — keep locally in archive/data/
 archive/data/
-data/yale_directory.txt
-data/scanner_log.xlsx
 
 # Legacy scrapers (may contain session tokens if edited locally)
 archive/yalies/
