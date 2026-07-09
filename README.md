@@ -11,15 +11,19 @@ Flask ticketing app for Yale/LEO events. Guests sign in with Google OAuth, recei
 
 ## Stack
 
-- Python 3.11, Flask, SQLAlchemy, PostgreSQL
+- **Frontend:** React 18, TypeScript, Vite, React Router (dark/light mode)
+- **Backend:** Python 3.11, Flask, SQLAlchemy, PostgreSQL
 - Google OAuth 2.0
 - Gunicorn + Docker for production
+
+> Original Jinja/HTML templates are preserved in `archive/templates/` for rollback.
 
 ## Local development
 
 ### Prerequisites
 
 - Python 3.11+
+- Node.js 20+ (for React frontend)
 - Docker (for PostgreSQL)
 
 ### Setup
@@ -44,12 +48,29 @@ $env:FLASK_APP = "app.py"
 flask db upgrade
 python scripts/seed_database.py --skip-scans   # add --skip-directory to skip Yale directory
 
-# Run
+# Run (build frontend first, or use dev mode below)
+cd frontend && npm install && npm run build && cd ..
 .\start.ps1
 # or: python app.py
 ```
 
 Open http://127.0.0.1:5000
+
+### Frontend development (hot reload)
+
+Terminal 1 — Flask API:
+```powershell
+.\start.ps1
+```
+
+Terminal 2 — Vite dev server (proxies `/api` and `/google` to Flask):
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://127.0.0.1:5173
 
 ### Google OAuth (local)
 

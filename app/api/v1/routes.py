@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, request
+import io
+
+from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.auth.decorators import api_auth_required, get_auth_context, permission_required
 from app.auth.rbac import is_attendee
@@ -16,7 +18,21 @@ def _error(code: str, message: str, status: int):
 
 @bp.get("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "frontend": "react"})
+
+
+@bp.get("/scanner/bootstrap")
+def scanner_bootstrap():
+    """Public config for scanner kiosks (mirrors legacy embedded API key)."""
+    key = current_app.config.get("SCANNER_API_KEY", "")
+    return jsonify({"scanner_api_key": key if key else ""})
+
+
+@bp.get("/theme")
+def get_theme():
+    settings = event_service.get_event_settings()
+    theme = settings.default_theme if settings.default_theme in ("light", "dark") else "light"
+    return jsonify({"default_theme": theme})
 
 
 @bp.get("/me")
@@ -41,15 +57,149 @@ def patch_event():
     body = request.get_json(silent=True) or {}
     title = body.get("title")
     image_visible = body.get("image_visible")
+    contact_email = body.get("contact_email")
+    default_theme = body.get("default_theme")
+    postcard_enabled = body.get("postcard_enabled")
+    postcard_stamp_default = body.get("postcard_stamp_default")
+    postcard_stamp_orientation = body.get("postcard_stamp_orientation")
+    postcard_stamp_preset = body.get("postcard_stamp_preset")
+    watermark_preset = body.get("watermark_preset")
 
-    if title is None and image_visible is None:
-        return _error("BAD_REQUEST", "Provide title and/or image_visible", 400)
+    if (
+        title is None
+        and image_visible is None
+        and contact_email is None
+        and default_theme is None
+        and postcard_enabled is None
+        and postcard_stamp_default is None
+        and postcard_stamp_orientation is None
+        and postcard_stamp_preset is None
+        and watermark_preset is None
+    ):
+        return _error(
+            "BAD_REQUEST",
+            "Provide title, image_visible, contact_email, default_theme, postcard_enabled, postcard_stamp_default, postcard_stamp_orientation, postcard_stamp_preset, and/or watermark_preset",
+            400,
+        )
+
+    if default_theme is not None and default_theme not in ("light", "dark"):
+        return _error("BAD_REQUEST", "default_theme must be light or dark", 400)
+
+    if postcard_stamp_orientation is not None and postcard_stamp_orientation not in (
+        "vertical",
+        "horizontal",
+    ):
+        return _error(
+            "BAD_REQUEST",
+            "postcard_stamp_orientation must be vertical or horizontal",
+            400,
+        )
+
+    if postcard_stamp_preset is not None:
+        if postcard_stamp_preset not in (
+            "yale_bowl",
+            "sterling",
+            "leo",
+            "rugby",
+            "ink",
+            "custom",
+        ):
+            return _error("BAD_REQUEST", "Invalid postcard_stamp_preset", 400)
+        settings = event_service.set_postcard_stamp_preset(postcard_stamp_preset)
+        if (
+            title is None
+            and image_visible is None
+            and contact_email is None
+            and default_theme is None
+            and postcard_enabled is None
+            and postcard_stamp_default is None
+            and postcard_stamp_orientation is None
+            and watermark_preset is None
+        ):
+            return jsonify(settings.to_dict())
+
+    if watermark_preset is not None:
+        if watermark_preset not in ("none", "leo", "rugby", "ink"):
+            return _error("BAD_REQUEST", "watermark_preset must be none, leo, rugby, or ink", 400)
+        settings = event_service.set_watermark_preset(watermark_preset)
+        if (
+            title is None
+            and image_visible is None
+            and contact_email is None
+            and default_theme is None
+            and postcard_enabled is None
+            and postcard_stamp_default is None
+            and postcard_stamp_orientation is None
+            and postcard_stamp_preset is None
+        ):
+            return jsonify(settings.to_dict())
 
     settings = event_service.update_event_settings(
         title=title,
         image_visible=image_visible if image_visible is not None else None,
+        contact_email=contact_email if contact_email is not None else None,
+        default_theme=default_theme if default_theme is not None else None,
+        postcard_enabled=postcard_enabled if postcard_enabled is not None else None,
+        postcard_stamp_default=postcard_stamp_default if postcard_stamp_default is not None else None,
+        postcard_stamp_orientation=postcard_stamp_orientation
+        if postcard_stamp_orientation is not None
+        else None,
     )
     return jsonify(settings.to_dict())
+
+
+@bp.put("/event/watermark")
+@permission_required("event:write", api=True)
+def upload_watermark():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return _error("BAD_REQUEST", "file is required", 400)
+    raw = file.read()
+    try:
+        settings = event_service.set_watermark_image(raw, file.content_type or "")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+    return jsonify(settings.to_dict())
+
+
+@bp.delete("/event/watermark")
+@permission_required("event:write", api=True)
+def delete_watermark():
+    settings = event_service.clear_watermark_image()
+    return jsonify(settings.to_dict())
+
+
+@bp.get("/event/watermark")
+@permission_required("event:read", api=True)
+def get_event_watermark():
+    payload = event_service.get_watermark_payload()
+    if payload is None:
+        return _error("NOT_FOUND", "No custom watermark uploaded", 404)
+    data, content_type = payload
+    return send_file(
+        io.BytesIO(data),
+        mimetype=content_type,
+        download_name="watermark.png",
+        max_age=0,
+    )
+
+
+@bp.get("/ticket/watermark")
+@api_auth_required
+def get_ticket_watermark():
+    ctx = get_auth_context()
+    if ctx.auth_method != "session" or not is_attendee(ctx.email):
+        return _error("FORBIDDEN", "Ticket watermark requires guest session", 403)
+    payload = event_service.get_watermark_payload()
+    if payload is None:
+        return _error("NOT_FOUND", "No custom watermark uploaded", 404)
+    data, content_type = payload
+    return send_file(
+        io.BytesIO(data),
+        mimetype=content_type,
+        download_name="watermark.png",
+        max_age=300,
+    )
 
 
 @bp.get("/allowed-emails")
@@ -93,16 +243,37 @@ def get_ticket():
     if ctx.auth_method != "session":
         return _error("FORBIDDEN", "Ticket endpoint requires Google session login", 403)
     if not is_attendee(ctx.email):
-        return _error("FORBIDDEN", "Email is not on the guest list", 403)
+        settings = event_service.get_event_settings()
+        return (
+            jsonify(
+                {
+                    "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Email is not on the guest list",
+                    },
+                    "contact_email": settings.contact_email,
+                }
+            ),
+            403,
+        )
 
     settings = event_service.get_event_settings()
-    qr_code = generate_qr(qr_encode(ctx.email))
+    logo_bytes = event_service.resolve_qr_logo_bytes(settings)
+    qr_code = generate_qr(
+        qr_encode(ctx.email),
+        logo_bytes=logo_bytes,
+        embed_logo=logo_bytes is not None,
+    )
     return jsonify(
         {
             "title": settings.title,
             "email": ctx.email,
             "qr_payload": qr_encode(ctx.email),
             "qr_code_base64": qr_code,
+            "postcard_enabled": settings.postcard_enabled,
+            "postcard_stamp_preset": settings.postcard_stamp_preset,
+            "watermark_preset": settings.watermark_preset,
+            "has_custom_watermark": settings.watermark_image is not None,
         }
     )
 

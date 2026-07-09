@@ -1,5 +1,6 @@
 Legacy files kept locally — not tracked in git.
 
+  templates/          Original Jinja HTML/CSS UI (before React rebuild)
   data/               Yale directory dumps, scanner Excel log, scraped HTML
   yalies/             Old directory scraper scripts (set YALIES_TOKEN locally)
   client_secret.json  Old Google OAuth JSON (use .env instead)

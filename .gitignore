@@ -31,3 +31,12 @@ archive/yalies/
 # IDE
 .vscode/
 .idea/
+
+# Frontend build artifacts
+frontend/node_modules/
+app/static/
+
+# Local debug output
+debug_qr.png
+tmp_qr_debug.png
+frontend/src/assets/_*.png

@@ -2,6 +2,7 @@ import functools
 
 import flask
 from authlib.integrations.requests_client import OAuth2Session
+import google.auth.exceptions
 import google.oauth2.credentials
 import googleapiclient.discovery
 
@@ -56,7 +57,12 @@ def get_user_info():
     oauth2_client = googleapiclient.discovery.build(
         "oauth2", "v2", credentials=credentials
     )
-    return oauth2_client.userinfo().get().execute()
+    try:
+        return oauth2_client.userinfo().get().execute()
+    except google.auth.exceptions.RefreshError:
+        flask.session.pop(AUTH_TOKEN_KEY, None)
+        flask.session.pop(AUTH_STATE_KEY, None)
+        return None
 
 
 def no_cache(view):

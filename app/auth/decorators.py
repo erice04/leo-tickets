@@ -36,6 +36,9 @@ def get_auth_context() -> AuthContext | None:
 
     if google_auth.is_logged_in():
         user_info = google_auth.get_user_info()
+        if user_info is None:
+            g.auth_context = None
+            return None
         email = normalize_email(user_info["email"])
         roles = resolve_roles_for_email(email)
         g.auth_context = AuthContext(email=email, roles=roles, auth_method="session")
