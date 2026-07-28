@@ -97,7 +97,7 @@ textarea {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -108,12 +108,20 @@ textarea {
   justify-content: space-between;
   padding: 1rem 1.25rem;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .top-bar-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.top-bar .btn {
+  height: 2.3rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  box-sizing: border-box;
 }
 
 .btn {
@@ -272,11 +280,16 @@ textarea {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 textarea,
 input[type="text"],
-input[type="email"] {
+input[type="email"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="number"],
+select {
   width: 100%;
   display: block;
   padding: 0.75rem 0.9rem;
@@ -337,6 +350,7 @@ input[type="file"] {
   color: var(--danger);
   padding: 0.75rem 1rem;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .grid-2 {
@@ -806,4 +820,282 @@ table.data-table tr:last-child td {
 [data-theme="dark"] .ticket-qr-wrap {
   border-color: #ffffff;
   background: #ffffff;
+}
+
+/* ── Analytics "spreadsheet" dashboard — intentionally styled apart from
+   the rest of the site to read as a dense data-grid rather than a card page ── */
+
+.sheet-page {
+  width: 100%;
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 1rem 3rem 2rem;
+}
+
+/* Analytics page only: fill the remaining viewport height below the top
+   bar so the page itself never scrolls -- only the grid inside does. */
+.analytics-fit {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.75rem;
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-fit .sheet-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.sheet-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.sheet-summary strong {
+  font-size: 1rem;
+  color: var(--heading);
+}
+
+.sheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  flex-shrink: 0;
+}
+
+.sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sheet-field label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.sheet-field input,
+.sheet-field select {
+  width: auto;
+  min-width: 130px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.sheet-grid-wrap {
+  border: 1px solid #b7b7b7;
+  overflow: auto;
+  max-height: 62vh;
+  background: #ffffff;
+}
+
+[data-theme="dark"] .sheet-grid-wrap {
+  background: #101010;
+  border-color: #3a3a3a;
+}
+
+table.sheet-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+  font-size: 0.82rem;
+}
+
+table.sheet-table thead th {
+  position: sticky;
+  top: 0;
+  background: #e8eaed;
+  color: #1a1a1a;
+  border: 1px solid #b7b7b7;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1;
+}
+
+[data-theme="dark"] table.sheet-table thead th {
+  background: #262626;
+  color: #eaeaea;
+  border-color: #3a3a3a;
+}
+
+.sheet-sort-arrow {
+  display: inline-block;
+  width: 0.9em;
+  margin-left: 0.3em;
+  text-align: center;
+}
+
+table.sheet-table td {
+  border: 1px solid #d7d7d7;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] table.sheet-table td {
+  border-color: #2c2c2c;
+  color: #ddd;
+}
+
+table.sheet-table tbody tr:nth-child(even) {
+  background: #f6f8fa;
+}
+
+[data-theme="dark"] table.sheet-table tbody tr:nth-child(even) {
+  background: #181818;
+}
+
+table.sheet-table tbody tr:hover {
+  background: #e6f0ff;
+}
+
+[data-theme="dark"] table.sheet-table tbody tr:hover {
+  background: #202a38;
+}
+
+.sheet-cell-actions {
+  width: 1%;
+}
+
+.sheet-x-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  border: 1px solid var(--border);
+  color: var(--danger);
+  background: transparent;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.sheet-x-btn:hover {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  border-color: var(--danger);
+}
+
+.sheet-bar-cell {
+  position: relative;
+  height: 1.3rem;
+  display: flex;
+  align-items: center;
+}
+
+.sheet-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 2px;
+}
+
+[data-theme="dark"] .sheet-bar {
+  background: color-mix(in srgb, var(--yale-gold) 35%, transparent);
+}
+
+.sheet-bar-label {
+  position: relative;
+  z-index: 1;
+  padding-left: 0.4rem;
+  font-weight: 600;
+}
+
+.sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.1rem;
+  flex-shrink: 0;
+}
+
+.sheet-tabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 0.6rem;
+  border-bottom: 2px solid #b7b7b7;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .sheet-tabs {
+  border-bottom-color: #3a3a3a;
+}
+
+.sheet-tab {
+  border: 1px solid #b7b7b7;
+  border-bottom: none;
+  background: #eceef1;
+  color: #444;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transform: translateY(2px);
+}
+
+.sheet-tab:hover {
+  background: #f5f6f8;
+}
+
+.sheet-tab-active {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  border-bottom: 2px solid var(--surface);
+}
+
+[data-theme="dark"] .sheet-tab {
+  background: #232323;
+  color: #ccc;
+  border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .sheet-tab:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .sheet-tab-active {
+  color: var(--yale-gold);
 }

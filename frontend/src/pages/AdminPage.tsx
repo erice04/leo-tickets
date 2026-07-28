@@ -286,7 +286,7 @@ export function AdminPage() {
               <div className="link-list">
                 <Link to="/admin/display">View Guest List</Link>
                 <Link to="/admin/blacklist/display">View Blacklist</Link>
-                <Link to="/admin/log">View Scanner Log</Link>
+                <Link to="/admin/analytics">Scan Analytics</Link>
                 <Link to="/">Preview Ticket</Link>
                 <Link to="/scanner">Open Scanner</Link>
               </div>

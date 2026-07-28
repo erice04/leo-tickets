@@ -4,7 +4,8 @@ import { TicketPage } from "./pages/TicketPage";
 import { ScannerPage } from "./pages/ScannerPage";
 import { AdminPage } from "./pages/AdminPage";
 import { DisplayEmailsPage } from "./pages/DisplayEmailsPage";
-import { DisplayLogPage } from "./pages/DisplayLogPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { DatabasePage } from "./pages/DatabasePage";
 
 export default function App() {
   return (
@@ -19,7 +20,8 @@ export default function App() {
             path="/admin/blacklist/display"
             element={<DisplayEmailsPage mode="blacklist" />}
           />
-          <Route path="/admin/log" element={<DisplayLogPage />} />
+          <Route path="/admin/analytics" element={<AnalyticsPage />} />
+          <Route path="/admin/database" element={<DatabasePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

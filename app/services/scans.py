@@ -7,7 +7,7 @@ from app.models import EventSettings, ScanLog, YaleStudent
 from app.services.qr import qr_decode
 
 
-def process_scan(payload: str, scanned_by: str | None = None) -> dict:
+def process_scan(payload: str) -> dict:
     email = qr_decode(payload).strip().lower()
     now = datetime.now(timezone.utc)
     dedup_seconds = current_app.config["SCAN_DEDUP_SECONDS"]
@@ -19,7 +19,7 @@ def process_scan(payload: str, scanned_by: str | None = None) -> dict:
 
     duplicate = recent is not None
     if not duplicate:
-        db.session.add(ScanLog(email=email, scanned_at=now, scanned_by=scanned_by))
+        db.session.add(ScanLog(email=email, scanned_at=now))
         db.session.commit()
 
     student = db.session.get(YaleStudent, email)
@@ -46,3 +46,22 @@ def list_scans(*, limit: int = 100, offset: int = 0) -> tuple[list[ScanLog], int
     total = query.count()
     logs = query.offset(offset).limit(limit).all()
     return logs, total
+
+
+def create_manual_scan(email: str, scanned_at: datetime | None = None) -> ScanLog:
+    normalized = email.strip().lower()
+    if not normalized:
+        raise ValueError("email is required")
+    log = ScanLog(email=normalized, scanned_at=scanned_at or datetime.now(timezone.utc))
+    db.session.add(log)
+    db.session.commit()
+    return log
+
+
+def delete_scan(scan_id: int) -> bool:
+    log = db.session.get(ScanLog, scan_id)
+    if log is None:
+        return False
+    db.session.delete(log)
+    db.session.commit()
+    return True

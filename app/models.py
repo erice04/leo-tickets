@@ -182,12 +182,10 @@ class ScanLog(db.Model):
     scanned_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=utcnow, index=True
     )
-    scanned_by = db.Column(db.String(255))
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "email": self.email,
             "scanned_at": self.scanned_at.isoformat() if self.scanned_at else None,
-            "scanned_by": self.scanned_by,
         }

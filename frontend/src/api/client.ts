@@ -112,7 +112,78 @@ export interface ScannerBootstrap {
   scanner_api_key: string;
 }
 
-export interface ScansResponse {
-  items: { id: number; email: string; scanned_at: string; scanned_by: string | null }[];
+export type ScanCategory = "yale_in_directory" | "yale_not_in_directory" | "non_yale";
+
+export interface CategorySummary {
+  yale_in_directory: number;
+  yale_not_in_directory: number;
+  non_yale: number;
   total: number;
+}
+
+export interface ScanDirectoryItem {
+  id: number;
+  email: string;
+  name: string | null;
+  scanned_at: string | null;
+  grade: string | null;
+  category: ScanCategory;
+}
+
+export interface ScanDirectoryResponse {
+  items: ScanDirectoryItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SessionFrequencyItem {
+  email: string;
+  name: string | null;
+  grade: string | null;
+  scans_in_session: number;
+  session_start: string | null;
+  session_end: string | null;
+}
+
+export interface SessionFrequencyResponse {
+  items: SessionFrequencyItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface NightCountItem {
+  email: string;
+  name: string | null;
+  grade: string | null;
+  nights: number;
+  total_scans: number;
+}
+
+export interface NightCountsResponse {
+  items: NightCountItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface TimeBucketItem {
+  bucket_start: string | null;
+  scans: number;
+}
+
+export interface TimeBucketsResponse {
+  items: TimeBucketItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface YaleStudentsTableResponse {
+  columns: string[];
+  items: Record<string, string | number | boolean | null>[];
+  total: number;
+  limit: number;
+  offset: number;
 }

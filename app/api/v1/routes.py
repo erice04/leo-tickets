@@ -1,9 +1,12 @@
 import io
+from datetime import date, datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.auth.decorators import api_auth_required, get_auth_context, permission_required
 from app.auth.rbac import is_attendee
+from app.services import analytics as analytics_service
+from app.services import database_browser as database_service
 from app.services import events as event_service
 from app.services import scans as scan_service
 from app.services import users as user_service
@@ -46,13 +49,13 @@ def me():
 
 
 @bp.get("/event")
-@permission_required("event:read", api=True)
+@permission_required("event:read")
 def get_event():
     return jsonify(event_service.get_event_settings().to_dict())
 
 
 @bp.patch("/event")
-@permission_required("event:write", api=True)
+@permission_required("event:write")
 def patch_event():
     body = request.get_json(silent=True) or {}
     title = body.get("title")
@@ -149,7 +152,7 @@ def patch_event():
 
 
 @bp.put("/event/watermark")
-@permission_required("event:write", api=True)
+@permission_required("event:write")
 def upload_watermark():
     file = request.files.get("file")
     if not file or not file.filename:
@@ -163,14 +166,14 @@ def upload_watermark():
 
 
 @bp.delete("/event/watermark")
-@permission_required("event:write", api=True)
+@permission_required("event:write")
 def delete_watermark():
     settings = event_service.clear_watermark_image()
     return jsonify(settings.to_dict())
 
 
 @bp.get("/event/watermark")
-@permission_required("event:read", api=True)
+@permission_required("event:read")
 def get_event_watermark():
     payload = event_service.get_watermark_payload()
     if payload is None:
@@ -203,13 +206,13 @@ def get_ticket_watermark():
 
 
 @bp.get("/allowed-emails")
-@permission_required("allowlist:read", api=True)
+@permission_required("allowlist:read")
 def get_allowed_emails():
     return jsonify({"emails": event_service.list_allowed_emails()})
 
 
 @bp.put("/allowed-emails")
-@permission_required("allowlist:write", api=True)
+@permission_required("allowlist:write")
 def put_allowed_emails():
     body = request.get_json(silent=True) or {}
     emails = body.get("emails")
@@ -220,13 +223,13 @@ def put_allowed_emails():
 
 
 @bp.get("/blacklisted-emails")
-@permission_required("allowlist:read", api=True)
+@permission_required("allowlist:read")
 def get_blacklisted_emails():
     return jsonify({"emails": event_service.list_blacklisted_emails()})
 
 
 @bp.put("/blacklisted-emails")
-@permission_required("allowlist:write", api=True)
+@permission_required("allowlist:write")
 def put_blacklisted_emails():
     body = request.get_json(silent=True) or {}
     emails = body.get("emails")
@@ -279,35 +282,31 @@ def get_ticket():
 
 
 @bp.post("/scans")
-@permission_required("scans:write", api=True)
+@permission_required("scans:write")
 def create_scan():
     body = request.get_json(silent=True) or {}
     payload = body.get("data") or body.get("payload")
     if not payload:
         return _error("BAD_REQUEST", "data or payload is required", 400)
 
-    ctx = get_auth_context()
-    scanned_by = None if ctx.email == "api-key" else ctx.email
-    result = scan_service.process_scan(payload, scanned_by=scanned_by)
+    result = scan_service.process_scan(payload)
     return jsonify(result), 201
 
 
 @bp.post("/scans/lookup")
-@permission_required("scans:write", api=True)
+@permission_required("scans:write")
 def lookup_scan():
     body = request.get_json(silent=True) or {}
     payload = body.get("data") or body.get("payload")
     if not payload:
         return _error("BAD_REQUEST", "data or payload is required", 400)
 
-    ctx = get_auth_context()
-    scanned_by = None if ctx.email == "api-key" else ctx.email
-    result = scan_service.process_scan(payload, scanned_by=scanned_by)
+    result = scan_service.process_scan(payload)
     return jsonify(result)
 
 
 @bp.get("/scans")
-@permission_required("scans:read", api=True)
+@permission_required("scans:read")
 def get_scans():
     limit = min(int(request.args.get("limit", 100)), 500)
     offset = max(int(request.args.get("offset", 0)), 0)
@@ -322,15 +321,257 @@ def get_scans():
     )
 
 
+@bp.post("/scans/manual")
+@permission_required("scans:manage")
+def create_manual_scan():
+    body = request.get_json(silent=True) or {}
+    email = body.get("email")
+    if not email:
+        return _error("BAD_REQUEST", "email is required", 400)
+
+    scanned_at = None
+    raw_scanned_at = body.get("scanned_at")
+    if raw_scanned_at:
+        try:
+            scanned_at = datetime.fromisoformat(raw_scanned_at)
+        except ValueError:
+            return _error("BAD_REQUEST", "scanned_at must be an ISO datetime", 400)
+        if scanned_at.tzinfo is None:
+            scanned_at = scanned_at.replace(tzinfo=timezone.utc)
+
+    try:
+        log = scan_service.create_manual_scan(email, scanned_at)
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+    return jsonify(log.to_dict()), 201
+
+
+@bp.delete("/scans/<int:scan_id>")
+@permission_required("scans:manage")
+def delete_scan(scan_id: int):
+    if not scan_service.delete_scan(scan_id):
+        return _error("NOT_FOUND", "Scan not found", 404)
+    return "", 204
+
+
+def _parse_date_param(name: str) -> date | None:
+    raw = request.args.get(name)
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be an ISO date (YYYY-MM-DD)")
+
+
+def _parse_datetime_param(name: str) -> datetime | None:
+    raw = request.args.get(name)
+    if not raw:
+        return None
+    try:
+        value = datetime.fromisoformat(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be an ISO datetime")
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _pagination_params() -> tuple[int, int]:
+    limit = min(int(request.args.get("limit", 100)), 100)
+    offset = max(int(request.args.get("offset", 0)), 0)
+    return limit, offset
+
+
+@bp.get("/analytics/scan-summary")
+@permission_required("scans:read")
+def get_scan_summary():
+    try:
+        day = _parse_date_param("day")
+        start = _parse_datetime_param("start")
+        end = _parse_datetime_param("end")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+    return jsonify(analytics_service.get_category_summary(day=day, start=start, end=end))
+
+
+@bp.get("/analytics/scans")
+@permission_required("scans:read")
+def get_analytics_scans():
+    try:
+        day = _parse_date_param("day")
+        start = _parse_datetime_param("start")
+        end = _parse_datetime_param("end")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    grade = request.args.get("grade")
+    category = request.args.get("category")
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", "scanned_at")
+    sort_dir = request.args.get("sort_dir", "desc")
+    limit, offset = _pagination_params()
+
+    try:
+        items, total = analytics_service.list_scans_with_directory(
+            grade=grade,
+            day=day,
+            start=start,
+            end=end,
+            category=category,
+            search=search,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    return jsonify({"items": items, "total": total, "limit": limit, "offset": offset})
+
+
+@bp.get("/analytics/session-frequency")
+@permission_required("scans:read")
+def get_session_frequency():
+    try:
+        start = _parse_datetime_param("start")
+        end = _parse_datetime_param("end")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    grade = request.args.get("grade")
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", "scans_in_session")
+    sort_dir = request.args.get("sort_dir", "desc")
+    limit, offset = _pagination_params()
+    session_gap_hours = float(
+        request.args.get("session_gap_hours", analytics_service.DEFAULT_SESSION_GAP_HOURS)
+    )
+    min_scans_in_session = int(request.args.get("min_scans_in_session", 1))
+
+    try:
+        items, total = analytics_service.get_session_frequency(
+            grade=grade,
+            start=start,
+            end=end,
+            search=search,
+            session_gap_hours=session_gap_hours,
+            min_scans_in_session=min_scans_in_session,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    return jsonify({"items": items, "total": total, "limit": limit, "offset": offset})
+
+
+@bp.get("/analytics/night-counts")
+@permission_required("scans:read")
+def get_night_counts():
+    try:
+        start = _parse_datetime_param("start")
+        end = _parse_datetime_param("end")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    grade = request.args.get("grade")
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", "nights")
+    sort_dir = request.args.get("sort_dir", "desc")
+    limit, offset = _pagination_params()
+    session_gap_hours = float(
+        request.args.get("session_gap_hours", analytics_service.DEFAULT_SESSION_GAP_HOURS)
+    )
+    min_nights = int(request.args.get("min_nights", 1))
+
+    try:
+        items, total = analytics_service.get_night_counts(
+            grade=grade,
+            start=start,
+            end=end,
+            search=search,
+            session_gap_hours=session_gap_hours,
+            min_nights=min_nights,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    return jsonify({"items": items, "total": total, "limit": limit, "offset": offset})
+
+
+@bp.get("/analytics/time-buckets")
+@permission_required("scans:read")
+def get_time_buckets():
+    try:
+        start = _parse_datetime_param("start")
+        end = _parse_datetime_param("end")
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    grade = request.args.get("grade")
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", "bucket_start")
+    sort_dir = request.args.get("sort_dir", "asc")
+    limit, offset = _pagination_params()
+    bucket_minutes = int(
+        request.args.get("bucket_minutes", analytics_service.DEFAULT_BUCKET_MINUTES)
+    )
+
+    try:
+        items, total = analytics_service.get_time_buckets(
+            grade=grade,
+            start=start,
+            end=end,
+            search=search,
+            bucket_minutes=bucket_minutes,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    return jsonify({"items": items, "total": total, "limit": limit, "offset": offset})
+
+
+@bp.get("/database/yale-students")
+@permission_required("database:read")
+def get_database_yale_students():
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by")
+    sort_dir = request.args.get("sort_dir", "asc")
+    limit, offset = _pagination_params()
+
+    try:
+        columns, items, total = database_service.browse_yale_students(
+            search=search, sort_by=sort_by, sort_dir=sort_dir, limit=limit, offset=offset
+        )
+    except ValueError as exc:
+        return _error("BAD_REQUEST", str(exc), 400)
+
+    return jsonify(
+        {"columns": columns, "items": items, "total": total, "limit": limit, "offset": offset}
+    )
+
+
 @bp.get("/users")
-@permission_required("users:read", api=True)
+@permission_required("users:read")
 def get_users():
     users = user_service.list_users()
     return jsonify({"items": [user.to_dict() for user in users]})
 
 
 @bp.post("/users")
-@permission_required("users:write", api=True)
+@permission_required("users:write")
 def post_user():
     body = request.get_json(silent=True) or {}
     email = body.get("email")
@@ -347,7 +588,7 @@ def post_user():
 
 
 @bp.delete("/users/<int:user_id>")
-@permission_required("users:write", api=True)
+@permission_required("users:write")
 def delete_user(user_id: int):
     if not user_service.delete_user(user_id):
         return _error("NOT_FOUND", "User not found", 404)

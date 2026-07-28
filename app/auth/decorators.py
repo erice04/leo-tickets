@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import current_app, g, jsonify, redirect, render_template, request, url_for
+from flask import current_app, g, jsonify, request
 
 from app.auth import google_auth
 from app.auth.permissions import Role
@@ -48,47 +48,20 @@ def get_auth_context() -> AuthContext | None:
     return None
 
 
-def login_required(view):
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        if not google_auth.is_logged_in():
-            return redirect(url_for("google_auth.login"), code=302)
-        return view(*args, **kwargs)
-
-    return wrapper
-
-
-def permission_required(permission: str, *, api: bool = False):
+def permission_required(permission: str):
     def decorator(view):
         @wraps(view)
         def wrapper(*args, **kwargs):
             ctx = get_auth_context()
             if ctx is None:
-                if api:
-                    return jsonify({"error": {"code": "UNAUTHORIZED", "message": "Authentication required"}}), 401
-                return render_template("general_error.html")
+                return jsonify({"error": {"code": "UNAUTHORIZED", "message": "Authentication required"}}), 401
             if not ctx.has_permission(permission):
-                if api:
-                    return jsonify({"error": {"code": "FORBIDDEN", "message": "Insufficient permissions"}}), 403
-                return render_template("general_error.html")
+                return jsonify({"error": {"code": "FORBIDDEN", "message": "Insufficient permissions"}}), 403
             return view(*args, **kwargs)
 
         return wrapper
 
     return decorator
-
-
-def admin_required(view):
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        if not google_auth.is_logged_in():
-            return redirect(url_for("google_auth.login"), code=302)
-        ctx = get_auth_context()
-        if ctx is None or not ctx.has_permission("event:write"):
-            return render_template("general_error.html")
-        return view(*args, **kwargs)
-
-    return wrapper
 
 
 def api_auth_required(view):

@@ -40,3 +40,6 @@ app/static/
 debug_qr.png
 tmp_qr_debug.png
 frontend/src/assets/_*.png
+
+# Local test-data generator (writes fake scan_logs for dashboard testing)
+scripts/generate_fake_scan_log.py

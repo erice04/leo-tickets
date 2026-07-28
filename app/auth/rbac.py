@@ -1,6 +1,5 @@
 from flask import current_app
 
-from app.auth import google_auth
 from app.auth.permissions import Role, roles_for_permission
 from app.extensions import db
 from app.models import AllowedEmail, BlacklistedEmail, User

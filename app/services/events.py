@@ -152,13 +152,6 @@ def get_watermark_payload() -> tuple[bytes, str] | None:
     return data, "image/png"
 
 
-def toggle_image_visibility() -> EventSettings:
-    settings = EventSettings.get()
-    settings.image_visible = not settings.image_visible
-    db.session.commit()
-    return settings
-
-
 def list_allowed_emails() -> list[str]:
     rows = AllowedEmail.query.order_by(AllowedEmail.email.asc()).all()
     return [row.email for row in rows]

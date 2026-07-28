@@ -5,7 +5,7 @@ import { Layout } from "../components/Layout";
 import { FlashingClock } from "../components/FlashingClock";
 import { PostcardTicket } from "../components/PostcardTicket";
 
-import { ApiClientError, apiGet, type TicketResponse } from "../api/client";
+import { ApiClientError, apiGet, type MeResponse, type TicketResponse } from "../api/client";
 
 import { EmailErrorPage } from "./EmailErrorPage";
 
@@ -53,7 +53,7 @@ export function TicketPage() {
 
             if (email) setContactEmail(email);
 
-            apiGet<{ email: string }>("/api/v1/me")
+            apiGet<MeResponse>("/api/v1/me")
 
               .then((me) => setDeniedEmail(me.email))
 
