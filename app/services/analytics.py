@@ -198,25 +198,11 @@ def list_scans_with_directory(
     return items, total
 
 
-def _seconds_since_prev_sql(dialect_name: str) -> str:
-    """SQL fragment computing seconds between scanned_at and prev_scanned_at.
-
-    Postgres has EXTRACT(EPOCH FROM interval); SQLite has neither EXTRACT nor
-    an interval type, but strftime('%s', ...) gives integer Unix seconds for
-    both operands, and since the two timestamps in a comparison always share
-    the same sub-second offset when the gap is a whole number of seconds, the
-    per-operand truncation cancels out in the subtraction.
-    """
-    if dialect_name == "sqlite":
-        return (
-            "(CAST(strftime('%s', scanned_at) AS FLOAT) - "
-            "CAST(strftime('%s', prev_scanned_at) AS FLOAT))"
-        )
-    return "EXTRACT(EPOCH FROM (scanned_at - prev_scanned_at))"
+_SECONDS_SINCE_PREV_SQL = "EXTRACT(EPOCH FROM (scanned_at - prev_scanned_at))"
 
 
-def _sessionized_cte_sql(dialect_name: str) -> str:
-    """CTE chain implementing gaps-and-islands sessionization.
+def _sessionized_cte_sql() -> str:
+    """CTE chain implementing gaps-and-islands sessionization (Postgres only).
 
     ``sessioned`` ends up with one row per scan, tagged with a session_number
     that increments each time the gap since that person's previous scan
@@ -224,7 +210,6 @@ def _sessionized_cte_sql(dialect_name: str) -> str:
     session" flag, per email, ordered by scanned_at with id as a tiebreaker
     for scans sharing an identical timestamp).
     """
-    seconds_since_prev = _seconds_since_prev_sql(dialect_name)
     return f"""
     filtered_scans AS (
         SELECT id, email, scanned_at
@@ -247,7 +232,7 @@ def _sessionized_cte_sql(dialect_name: str) -> str:
             scanned_at,
             CASE
                 WHEN prev_scanned_at IS NULL THEN 1
-                WHEN {seconds_since_prev} > :gap_seconds THEN 1
+                WHEN {_SECONDS_SINCE_PREV_SQL} > :gap_seconds THEN 1
                 ELSE 0
             END AS new_session_flag
         FROM ordered
@@ -298,8 +283,7 @@ def get_session_frequency(
         raise ValueError(f"Unknown sort_by: {sort_by}")
     _validate_sort_dir(sort_dir)
 
-    dialect_name = db.engine.dialect.name
-    cte_sql = _sessionized_cte_sql(dialect_name)
+    cte_sql = _sessionized_cte_sql()
     order_sql = f"{_SESSION_FREQUENCY_SORT_COLUMNS[sort_by]} {'ASC' if sort_dir == 'asc' else 'DESC'}"
 
     search = (search or "").strip()
@@ -384,8 +368,7 @@ def get_night_counts(
         raise ValueError(f"Unknown sort_by: {sort_by}")
     _validate_sort_dir(sort_dir)
 
-    dialect_name = db.engine.dialect.name
-    cte_sql = _sessionized_cte_sql(dialect_name)
+    cte_sql = _sessionized_cte_sql()
     order_sql = f"{_NIGHT_COUNT_SORT_COLUMNS[sort_by]} {'ASC' if sort_dir == 'asc' else 'DESC'}"
 
     search = (search or "").strip()
